@@ -1,0 +1,1 @@
+'''Empty as there are no functions (yet) in widget_app_base.py'''
