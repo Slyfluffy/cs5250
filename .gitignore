@@ -1,2 +1,4 @@
 # Ignore compile python files
 *.pyc
+
+/.devcontainer/devcontainer.json
