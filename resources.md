@@ -5,3 +5,4 @@
 * [python json](https://docs.python.org/3/library/json.html)
 * [python logging](https://docs.python.org/3/library/logging.html)
 * [aws boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html)
+* [pytest and aws](https://pytest-with-eric.com/mocking/pytest-mocking/#Mock-A-Class)
