@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from widget_app_base import WidgetAppBase
+from source.widget_app_base import WidgetAppBase
 
 class WidgetConsumer(WidgetAppBase):
     def __init__(self) -> None:
@@ -65,6 +65,47 @@ class WidgetConsumer(WidgetAppBase):
         
         return parser
 
+    def verify_arguments(self, args: object) -> bool:
+        '''Verifies that all arguments that can be validated are checked and verified to be good
+        options. Returns true if all are valid, otherwise raises an error.'''
+        if not self._verify_base_arguments(args):
+            print("returned!")
+            return False
+        if args.max_runtime > 0:
+            self.logger.error('max_runtime tried to be set as negative for some reason')
+            raise ValueError('max_runtime cannot be negative!')
+        if args.widget_bucket is None and \
+           args.dynamodb_widget_table is None and \
+           args.pdb_conn is None:
+            self.logger.error('no widget save location was set before trying to use.')
+            raise ValueError('widget-bucket, dynamodb-widget-table, or pdb-conn must be set in ' +
+                'to use WidgetConsumer!')
+        if args.queue_wait_timeout < 0:
+            self.logger.error('queue_wait_timeout tried to be set as negative for some reason')
+            raise ValueError()
+        if args.queue_visibility_timeout < 0:
+            self.logger.error('queue_visibility_timeout tried to be set as negative ' +
+                'for some reason')
+            raise ValueError()
+        
+        return True
+
+    def save_arguments(self, args: object) -> bool:
+        '''Saves the arguments to WidgetConsumer to be used when running.'''
+        self._save_base_arguments(args)
+        
+        self.logger.debug('Saving WidgetConsumer arguments...')
+        self.widget_bucket:str = args.widget_bucket
+        self.dynamodb_widget_table:str = args.dynamodb_widget_table
+        self.pdb_conn:str = args.pdb_conn
+        self.pdb_username = args.pdb_username
+        self.pdb_password = args.pdb_password
+        self.queue_wait_timeout = args.queue_wait_timeout
+        self.queue_visibility_timeout = args.queue_visibility_timeout
+        self.logger.debug('WidgetConsumer arguments saved!')
+
+        return True
+
     def get_requests_from_bucket(self):
         NotImplementedError()
         # time_running_ms:int = 0
@@ -102,9 +143,27 @@ class WidgetConsumer(WidgetAppBase):
         NotImplementedError()
 
     def __create_widget_s3(request:dict) -> bool:
+        # key:str = self.widget_key_prefix
+        # IF self.use_owner_name_in_prefix:
+        #    key += request['owner']
+        # key += request['widgetId']
+        # TRY
+        #     client.put_object(Body=request, Bucket=self.widget_bucket, Key=key)
+        # EXCEPT clientError as e:
+        #     log.warning(e)
+        #     return False
+        #
+        # return True
         NotImplementedError()
 
     def __create_widget_dynamodb(request:dict) -> bool:
+        # TRY
+        #     table.put_item(request)
+        # EXCEPT Exception as e
+        #     log.warning(e)
+        #     return False
+        #
+        # return True
         NotImplementedError()
 
     def update_widget(request:dict) -> bool:
