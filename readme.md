@@ -1,4 +1,10 @@
-# Resources
+# Readme
+
+## Running the unit tests
+
+To run the unit tests, use `python3 -m pytest` at the root of the repo.
+
+## Resource links
 
 * [python argparse](https://docs.python.org/3/library/argparse.html)
 * [pytest](https://docs.pytest.org/en/stable/index.html#)

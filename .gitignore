@@ -1,4 +1,5 @@
 # Ignore compile python files
 *.pyc
 
+.vscode/
 /.devcontainer/devcontainer.json
