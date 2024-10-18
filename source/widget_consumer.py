@@ -163,7 +163,6 @@ class WidgetConsumer(WidgetAppBase):
             return False
         
         return True
-        NotImplementedError()
 
     def _create_widget_dynamodb(request:dict) -> bool:
         # TRY
