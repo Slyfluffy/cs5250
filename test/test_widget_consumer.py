@@ -16,7 +16,7 @@ class ConsumerArgReplica(BaseArgReplica):
         self.queue_wait_timeout:int = 10
         self.queue_visibility_timeout:int = 2
 
-class TestWidgetConsumer:
+class TestWidgetConsumerVerifyArguments:
     def test_verify_arguments_negative_max_runtime(self):
         # setup
         args = ConsumerArgReplica()
@@ -91,3 +91,19 @@ class TestWidgetConsumer:
         # exercise and verify
         with raises(ValueError):
             app.verify_arguments(args)
+
+class TestWidgetConsumerCreateWidgetS3:
+    def test():
+        NotImplementedError()
+
+class TestWidgetConsumerCreateWidgetDynamoDB:
+    def test():
+        NotImplementedError()
+
+class TestWidgetConsumerCreateWidget:
+    def test():
+        NotImplementedError()
+
+class TestWidgetConsumerGetRequestsFromBucket:
+    def test():
+        NotImplementedError()

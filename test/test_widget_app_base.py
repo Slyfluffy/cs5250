@@ -11,7 +11,7 @@ class BaseArgReplica:
         self.use_owner_in_prefix:bool = False
         self.request_queue:str = None
 
-class TestWidgetAppBase:
+class TestWidgetAppBaseVerifyBaseArguments:
     def test_verify_base_arguments_request_bucket(self):
         # setup
         args = BaseArgReplica()
