@@ -180,10 +180,6 @@ class WidgetConsumer(WidgetAppBase):
     def delete_Widget(request:dict) -> bool:
         NotImplementedError()
 
-
-def verify_args():
-    NotImplementedError()
-
 if __name__ == '__main__':
     app = WidgetConsumer()
     parser = app.get_consumer_parser()
