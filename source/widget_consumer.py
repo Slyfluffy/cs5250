@@ -1,4 +1,8 @@
 from argparse import ArgumentParser
+from boto3 import client
+from botocore.exceptions import ClientError
+from json import dumps
+
 from source.widget_app_base import WidgetAppBase
 
 class WidgetConsumer(WidgetAppBase):
@@ -90,12 +94,17 @@ class WidgetConsumer(WidgetAppBase):
         
         return True
 
+    def _create_service_clients(self) -> bool:
+        if self.widget_bucket is not None:
+            self.aws_s3 = client('s3', region_name=self.region)
+
     def save_arguments(self, args: object) -> bool:
         '''Saves the arguments to WidgetConsumer to be used when running.'''
         self._save_base_arguments(args)
         
         self.logger.debug('Saving WidgetConsumer arguments...')
         self.widget_bucket:str = args.widget_bucket
+        self.widget_key_prefix:str = args.widget_key_prefix
         self.dynamodb_widget_table:str = args.dynamodb_widget_table
         self.pdb_conn:str = args.pdb_conn
         self.pdb_username = args.pdb_username
@@ -142,21 +151,21 @@ class WidgetConsumer(WidgetAppBase):
     def create_widget(request:dict) -> bool:
         NotImplementedError()
 
-    def __create_widget_s3(request:dict) -> bool:
-        # key:str = self.widget_key_prefix
-        # IF self.use_owner_name_in_prefix:
-        #    key += request['owner']
-        # key += request['widgetId']
-        # TRY
-        #     client.put_object(Body=request, Bucket=self.widget_bucket, Key=key)
-        # EXCEPT clientError as e:
-        #     log.warning(e)
-        #     return False
-        #
-        # return True
+    def _create_widget_s3(self, request:dict) -> bool:
+        key:str = self.widget_key_prefix
+        if self.use_owner_in_prefix:
+           key += (request['owner'] + '/')
+        key += request['widgetId']
+        try:
+            self.aws_s3.put_object(Body=dumps(request), Bucket=self.widget_bucket, Key=key)
+        except ClientError as e:
+            self.logger.warning(e)
+            return False
+        
+        return True
         NotImplementedError()
 
-    def __create_widget_dynamodb(request:dict) -> bool:
+    def _create_widget_dynamodb(request:dict) -> bool:
         # TRY
         #     table.put_item(request)
         # EXCEPT Exception as e
