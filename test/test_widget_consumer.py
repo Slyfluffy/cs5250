@@ -1,3 +1,5 @@
+from boto3 import client
+from moto import mock_aws
 from pytest import raises
 
 from source.widget_consumer import WidgetConsumer
@@ -92,18 +94,99 @@ class TestWidgetConsumerVerifyArguments:
         with raises(ValueError):
             app.verify_arguments(args)
 
+@mock_aws
 class TestWidgetConsumerCreateWidgetS3:
-    def test():
-        NotImplementedError()
+    def test_create_widget_s3_mocked_no_name_in_prefix(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.widget_bucket = 'test-bucket'
 
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock s3
+        app.aws_s3.create_bucket(Bucket=args.widget_bucket)
+
+        # exercise and verify
+        assert app._create_widget_s3(request)
+
+    def test_create_widget_s3_mocked_name_in_prefix(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.widget_bucket = 'test-bucket'
+        args.use_owner_in_prefix = True
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock s3
+        app.aws_s3.create_bucket(Bucket=args.widget_bucket)
+
+        # exercise and verify
+        assert app._create_widget_s3(request)
+
+        # exercise and verify
+        response = app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
+        assert True # We got a response so we are good
+
+    def test_create_widget_s3_mocked_bad_request(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.widget_bucket = 'test-bucket'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock s3
+        app.aws_s3.create_bucket(Bucket='test')
+
+        # exercise and verify
+        assert not app._create_widget_s3(request)
+
+@mock_aws
 class TestWidgetConsumerCreateWidgetDynamoDB:
     def test():
         NotImplementedError()
 
+@mock_aws
 class TestWidgetConsumerCreateWidget:
     def test():
         NotImplementedError()
 
+@mock_aws
 class TestWidgetConsumerGetRequestsFromBucket:
     def test():
         NotImplementedError()
