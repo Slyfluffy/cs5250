@@ -3,7 +3,7 @@ from pytest import raises
 
 from source.widget_app_base import WidgetAppBase
 
-class ArgReplica:
+class BaseArgReplica:
     def __init__(self) -> None:
         self.profile:str = 'default'
         self.region:str = 'us-east-1'
@@ -12,10 +12,9 @@ class ArgReplica:
         self.request_queue:str = None
 
 class TestWidgetAppBase:
-
     def test_verify_base_arguments_request_bucket(self):
         # setup
-        args = ArgReplica()
+        args = BaseArgReplica()
         args.request_bucket = 'test'
         app = WidgetAppBase()
         
@@ -24,7 +23,7 @@ class TestWidgetAppBase:
 
     def test_verify_base_arguments_request_queue(self):
         # setup
-        args = ArgReplica()
+        args = BaseArgReplica()
         args.request_queue = 'test'
         app = WidgetAppBase()
         
@@ -33,7 +32,7 @@ class TestWidgetAppBase:
 
     def test_verify_base_arguments_no_request_bucket_no_request_queue(self):
         # setup
-        args = ArgReplica()
+        args = BaseArgReplica()
         app = WidgetAppBase()
         
         # exercise and verify
