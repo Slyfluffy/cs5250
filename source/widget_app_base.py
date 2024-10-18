@@ -16,9 +16,11 @@ class WidgetAppBase():
         '''Verifies that the base needed arguments are met. If they are not, throws an error.
         Returns true if all the arguments are valid.
         '''
-
         if args.request_bucket is None and args.request_queue is None:
-            raise ValueError()
+            raise ValueError('request-bucket argument or request-queue must be used in order for ' +
+                             'this application to work properly.')
+        
+        return True
 
     def _save_base_arguments(self, args: object) -> None:
         '''Saves the passed arguments into the class.'''
