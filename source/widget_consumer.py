@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from boto3 import client
+from boto3 import client, resource
 from botocore.exceptions import ClientError
 from json import dumps
 
@@ -97,6 +97,9 @@ class WidgetConsumer(WidgetAppBase):
     def _create_service_clients(self) -> bool:
         if self.widget_bucket is not None:
             self.aws_s3 = client('s3', region_name=self.region)
+        if self.dynamodb_widget_table is not None:
+            self.aws_dynamodb = resource('dynamodb', region_name=self.region)
+            self.aws_dynamodb_table = self.aws_dynamodb.Table(self.dynamodb_widget_table)
 
     def save_arguments(self, args: object) -> bool:
         '''Saves the arguments to WidgetConsumer to be used when running.'''
@@ -164,15 +167,14 @@ class WidgetConsumer(WidgetAppBase):
         
         return True
 
-    def _create_widget_dynamodb(request:dict) -> bool:
-        # TRY
-        #     table.put_item(request)
-        # EXCEPT Exception as e
-        #     log.warning(e)
-        #     return False
-        #
-        # return True
-        NotImplementedError()
+    def _create_widget_dynamodb(self, request:dict) -> bool:
+        try:
+            self.aws_dynamodb_table.put_item(Item=request)
+        except Exception as e:
+            self.logger.warning(e)
+            return False
+        
+        return True
 
     def update_widget(request:dict) -> bool:
         NotImplementedError()
