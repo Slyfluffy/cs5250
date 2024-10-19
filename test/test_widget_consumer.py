@@ -1,4 +1,5 @@
 from boto3 import client
+from json import dumps
 from moto import mock_aws
 from pytest import raises
 
@@ -105,10 +106,64 @@ class TestWidgetConsumerGetRequestsFromBucket:
 @mock_aws
 class TestWidgetConsumerDeleteRequest:
     def test_valid_delete_request(self):
-        NotImplementedError()
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1',
+            'requestId': '1'
+        }
+        
+        ## mock s3
+        app.aws_s3.create_bucket(Bucket=args.request_bucket)
+
+        ## Prep bucket to delete
+        app.aws_s3.put_object(Body=dumps(request), 
+                              Bucket=args.request_bucket, 
+                              Key=request['requestId'])
+
+        # exercise and verify
+        assert app._delete_request(request)
 
     def test_invalid_delete_request(self):
-        NotImplementedError()
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1',
+            'requestId': '2'
+        }
+        
+        ## mock s3
+        app.aws_s3.create_bucket(Bucket=args.request_bucket)
+
+        ## Prep bucket to delete
+        app.aws_s3.put_object(Body=dumps(request), 
+                              Bucket=args.request_bucket, 
+                              Key=request['requestId'])
+
+        # exercise and verify
+        assert app._delete_request(request)
 
 @mock_aws
 class TestWidgetConsumerProcessRequest:
