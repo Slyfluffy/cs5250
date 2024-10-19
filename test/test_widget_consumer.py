@@ -267,11 +267,30 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
         assert not app._create_widget_dynamodb(request)
 
 @mock_aws
-class TestWidgetConsumerCreateWidget:
-    def test():
+class TestWidgetConsumerGetRequestsFromBucket:
+    def test_bad_get_widget_request():
         NotImplementedError()
 
-@mock_aws
-class TestWidgetConsumerGetRequestsFromBucket:
-    def test():
+    def test_bad_delete_request():
         NotImplementedError()
+
+    def test_valid_create_widget_request():
+        NotImplementedError()
+
+    def test_invalid_create_widget_request():
+        NotImplementedError()
+
+    # def test_valid_update_widget_request():
+    #     NotImplementedError()
+
+    # def test_invalid_update_widget_request():
+    #     NotImplementedError()
+
+    # def test_valid_delete_widget_request():
+    #     NotImplementedError()
+
+    # def test_invalid_delete_widget_request():
+    #     NotImplementedError()
+
+    # def test_invalid_request():
+    #     NotImplementedError()
