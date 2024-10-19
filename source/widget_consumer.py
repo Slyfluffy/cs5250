@@ -141,15 +141,14 @@ class WidgetConsumer(WidgetAppBase):
         #         return
         # WHILE time_running_ms != 0 and time_running_ms < self.max_runtime
 
-    def delete_request(self, request:dict) -> bool:
-        # try
-        #     self.aws_s3.delete_object(Bucket=self.request_bucket,Key=request['requestId'])
-        # except ClientError as e:
-        #     self.logger.error(e)
-        #     return False
-        #
-        # return True
-        NotImplementedError()
+    def _delete_request(self, request:dict) -> bool:
+        try:
+            self.aws_s3.delete_object(Bucket=self.request_bucket,Key=request['requestId'])
+        except ClientError as e:
+            self.logger.error(e)
+            return False
+        
+        return True
 
     def process_request(self, request:dict) -> bool:
         # if request['type'] == 'create':
