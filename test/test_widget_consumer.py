@@ -148,7 +148,7 @@ class TestWidgetConsumerCreateWidgetS3:
         assert app._create_widget_s3(request)
 
         # exercise and verify
-        response = app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
+        app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
         assert True # We got a response so we are good
 
     def test_create_widget_s3_mocked_bad_request(self):
@@ -178,8 +178,93 @@ class TestWidgetConsumerCreateWidgetS3:
 
 @mock_aws
 class TestWidgetConsumerCreateWidgetDynamoDB:
-    def test():
-        NotImplementedError()
+    def test_valid_create_widget_dynamodb(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.dynamodb_widget_table = 'test-table'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_dynamodb = client('dynamodb', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock dynamodb
+        app.aws_dynamodb.create_table(
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'widgetId',
+                    'AttributeType': 'S'
+                },
+            ],
+            TableName=args.dynamodb_widget_table,
+            KeySchema=[
+                {
+                    'AttributeName': 'widgetId',
+                    'KeyType': 'HASH'
+                },
+            ],
+            BillingMode='PROVISIONED',
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 1,
+                'WriteCapacityUnits': 1
+            },
+        )
+
+        # exercise and verify
+        assert app._create_widget_dynamodb(request)
+
+    def test_invalid_create_widget_dynamodb(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.dynamodb_widget_table = 'test-table'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_dynamodb = client('dynamodb', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock dynamodb
+        app.aws_dynamodb.create_table(
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'widgetId',
+                    'AttributeType': 'S'
+                },
+            ],
+            TableName='test',
+            KeySchema=[
+                {
+                    'AttributeName': 'widgetId',
+                    'KeyType': 'HASH'
+                },
+            ],
+            BillingMode='PROVISIONED',
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 1,
+                'WriteCapacityUnits': 1
+            },
+        )
+
+        # exercise and verify
+        assert not app._create_widget_dynamodb(request)
 
 @mock_aws
 class TestWidgetConsumerCreateWidget:
