@@ -95,6 +95,45 @@ class TestWidgetConsumerVerifyArguments:
             app.verify_arguments(args)
 
 @mock_aws
+class TestWidgetConsumerGetRequestsFromBucket:
+    def test_bad_get_widget_request():
+        NotImplementedError()
+
+    def test_bad_delete_request():
+        NotImplementedError()
+
+@mock_aws
+class TestWidgetConsumerDeleteRequest:
+    def test_valid_delete_request(self):
+        NotImplementedError()
+
+    def test_invalid_delete_request(self):
+        NotImplementedError()
+
+@mock_aws
+class TestWidgetConsumerProcessRequest:
+    def test_valid_create_widget_request():
+        NotImplementedError()
+
+    def test_invalid_create_widget_request():
+        NotImplementedError()
+
+    # def test_valid_update_widget_request():
+    #     NotImplementedError()
+
+    # def test_invalid_update_widget_request():
+    #     NotImplementedError()
+
+    # def test_valid_delete_widget_request():
+    #     NotImplementedError()
+
+    # def test_invalid_delete_widget_request():
+    #     NotImplementedError()
+
+    # def test_invalid_request():
+    #     NotImplementedError()
+
+@mock_aws
 class TestWidgetConsumerCreateWidgetS3:
     def test_create_widget_s3_mocked_no_name_in_prefix(self):
         # setup
@@ -265,32 +304,3 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
 
         # exercise and verify
         assert not app._create_widget_dynamodb(request)
-
-@mock_aws
-class TestWidgetConsumerGetRequestsFromBucket:
-    def test_bad_get_widget_request():
-        NotImplementedError()
-
-    def test_bad_delete_request():
-        NotImplementedError()
-
-    def test_valid_create_widget_request():
-        NotImplementedError()
-
-    def test_invalid_create_widget_request():
-        NotImplementedError()
-
-    # def test_valid_update_widget_request():
-    #     NotImplementedError()
-
-    # def test_invalid_update_widget_request():
-    #     NotImplementedError()
-
-    # def test_valid_delete_widget_request():
-    #     NotImplementedError()
-
-    # def test_invalid_delete_widget_request():
-    #     NotImplementedError()
-
-    # def test_invalid_request():
-    #     NotImplementedError()

@@ -95,7 +95,7 @@ class WidgetConsumer(WidgetAppBase):
         return True
 
     def _create_service_clients(self) -> bool:
-        if self.widget_bucket is not None:
+        if self.request_bucket is not None or self.widget_bucket is not None:
             self.aws_s3 = client('s3', region_name=self.region)
         if self.dynamodb_widget_table is not None:
             self.aws_dynamodb = resource('dynamodb', region_name=self.region)
@@ -122,34 +122,45 @@ class WidgetConsumer(WidgetAppBase):
         NotImplementedError()
         # time_running_ms:int = 0
         # DO
-        #     TRY
+        #     try:
         #         GET request from s3 bucket
         #         CONVERT request to json
-        #         delete_request(request)
-        #
-        #         IF request['type'] == 'create'
-        #             create_widget(request)
-        #             continue
-        #         ELSE IF request['type'] == 'update'
-        #             update_widget(request)
-        #             continue
-        #         ELSE IF request['delete'] == 'delete'
-        #             delete_widget(request)
-        #             continue
-        #         ELSE
-        #             throw ERROR stating unknown request type
-        # 
+        #         if not delete_request(request);
+        #             continue # Error already logged, return
+        #         if request is successful:
+        #             if not process_request(request):
+        #                 self.logger.info(f'{request['type']} request processed successfully')
         #         time.sleep(100)
         #     EXCEPT ERROR about unknown request type
         #         log error and continue loop
         #     EXCEPT Ctrl+C 
-        #         log user entered shutdown and shut down consumer
-        #     EXCEPT anything else
-        #         log error and shutdown
+        #         self.error.info('Ctrl+C detected. Shutting Down consumer...')
+        #         return
+        #     except Exception as e:
+        #         self.logger.error(e)
+        #         return
         # WHILE time_running_ms != 0 and time_running_ms < self.max_runtime
 
     def delete_request(self, request:dict) -> bool:
+        # try
+        #     self.aws_s3.delete_object(Bucket=self.request_bucket,Key=request['requestId'])
+        # except ClientError as e:
+        #     self.logger.error(e)
+        #     return False
+        #
+        # return True
         NotImplementedError()
+
+    def process_request(self, request:dict) -> bool:
+        # if request['type'] == 'create':
+        #     return create_widget(request)
+        # if request['type'] == 'update':
+        #     return update_widget(request)
+        # if request['delete'] == 'delete':
+        #     return delete_widget(request)
+        # else
+        #     throw ERROR stating unknown request type
+        return NotImplementedError()
 
     def create_widget(self, request:dict) -> bool:
         if self.widget_bucket is not None:
