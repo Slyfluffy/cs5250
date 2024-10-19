@@ -148,11 +148,14 @@ class WidgetConsumer(WidgetAppBase):
         #         log error and shutdown
         # WHILE time_running_ms != 0 and time_running_ms < self.max_runtime
 
-    def delete_request(request:dict) -> bool:
+    def delete_request(self, request:dict) -> bool:
         NotImplementedError()
 
-    def create_widget(request:dict) -> bool:
-        NotImplementedError()
+    def create_widget(self, request:dict) -> bool:
+        if self.widget_bucket is not None:
+            return self._create_widget_s3(request)
+        if self.dynamodb_widget_table is not None:
+            return self._create_widget_dynamodb(request)
 
     def _create_widget_s3(self, request:dict) -> bool:
         key:str = self.widget_key_prefix
