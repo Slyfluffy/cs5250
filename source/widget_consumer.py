@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from boto3 import client, resource
 from botocore.exceptions import ClientError
-from json import dumps
+from json import dumps, loads
 
 from source.widget_app_base import WidgetAppBase
 
@@ -145,28 +145,29 @@ class WidgetConsumer(WidgetAppBase):
         #         done = True
 
     def _get_request(self) -> dict:
-        # if self.request_bucket is not None:
-        #     return self._get_request_s3()
-        # if self.request_queue_url is not None:
-        #     return self._get_request_queue()
-        # 
-        # return { 'type': 'unknown' } # Take advantage of our error handling above
-        NotImplementedError()
+        if self.request_bucket is not None:
+            return self._get_request_s3()
+        if self.request_queue_url is not None:
+            return self._get_request_queue()
+        
+        # Something wacky happened. Returning default dict
+        self.logger.warning('Some unknown error happened when getting a request. ' + 
+                            'Returning empty request dict.')
+        return { 'type': 'unknown' } # Take advantage of our error handling above
 
     def _get_request_s3(self) -> dict:
-        # try:
-        #     # Get the first object key in the bucket since we don't know it
-        #     response = self.aws_s3.list_buckets_v2(Bucket=self.request_bucket, MaxKeys=1)
-        #     key = response['Contents'][0]['Key']
-        #     
-        #     # Now that we have the key, get the actual request and return it
-        #     response = self.aws_s3.get_object(Bucket=self.request_bucket, Key=)
-        #     return loads(response["Body"].read())
-        # except ClientError as e:
-        #     self.logger.warning(e)
-        #
-        # return { 'type': 'unknown' }
-        NotImplementedError()
+        try:
+            # Get the first object key in the bucket since we don't know it
+            response = self.aws_s3.list_objects_v2(Bucket=self.request_bucket, MaxKeys=1)
+            key = response['Contents'][0]['Key']
+            
+            # Now that we have the key, get the actual request and return it
+            response = self.aws_s3.get_object(Bucket=self.request_bucket, Key=key)
+            return loads(response["Body"].read())
+        except Exception as e:
+            self.logger.warning(e)
+        
+        return { 'type': 'unknown' }
 
     def _get_request_queue(self) -> dict:
         NotImplementedError()
