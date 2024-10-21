@@ -165,28 +165,44 @@ class TestWidgetConsumerDeleteRequest:
         # exercise and verify
         assert app._delete_request(request)
 
-@mock_aws
 class TestWidgetConsumerProcessRequest:
-    def test_valid_create_widget_request():
-        NotImplementedError()
+    def test_valid_create_widget_request(self, mocker):
+        # setup
+        ## request
+        request:dict[str, str] = {
+            'type': 'create',
+            'owner': 'tester',
+            'widgetId': '1',
+        }
 
-    def test_invalid_create_widget_request():
-        NotImplementedError()
+        # app (mock the create_widget function so we don't do all the work)
+        app = WidgetConsumer()
+        mocker.patch.object(app, 'create_widget', return_value=True)
+        
+        # Exercise and Verify
+        assert app.process_request(request)
 
     # def test_valid_update_widget_request():
-    #     NotImplementedError()
-
-    # def test_invalid_update_widget_request():
     #     NotImplementedError()
 
     # def test_valid_delete_widget_request():
     #     NotImplementedError()
 
-    # def test_invalid_delete_widget_request():
-    #     NotImplementedError()
+    def test_invalid_request(self):
+        # setup
+        ## request
+        request:dict[str, str] = {
+            'type': 'unknown',
+            'owner': 'tester',
+            'widgetId': '1',
+        }
 
-    # def test_invalid_request():
-    #     NotImplementedError()
+        # app (mock the create_widget function so we don't do all the work)
+        app = WidgetConsumer()
+        
+        # Exercise and Verify
+        with raises(ValueError):
+            app.process_request(request)
 
 @mock_aws
 class TestWidgetConsumerCreateWidgetS3:

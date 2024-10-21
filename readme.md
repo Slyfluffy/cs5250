@@ -1,5 +1,12 @@
 # Readme
 
+## pip packages 
+
+* boto3
+* pytest
+* pytest-mock
+* moto[all]
+
 ## Running the unit tests
 
 To run the unit tests, use `python3 -m pytest` at the root of the repo.
