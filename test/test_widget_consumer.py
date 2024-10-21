@@ -97,26 +97,67 @@ class TestWidgetConsumerVerifyArguments:
 
 @mock_aws
 class TestWidgetConsumerconsumeRequests:
-    def test_bad_get_widget_request():
+    def test_bad_get_widget_request(self):
         NotImplementedError()
 
-    def test_bad_delete_request():
+    def test_bad_delete_request(self):
         NotImplementedError()
-
-class TestWidgetConsumerGetRequest:
-    def test_get_request_s3(self):
-        NotImplementedError()
-
-    # def test_get_request_queue(self):
-    #     NotImplementedError()
 
 @mock_aws
 class TestWidgetConsumerGetRequestS3:
     def test_valid_get_request(self):
-        NotImplementedError()
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1',
+            'requestId': '1',
+            'type': 'create'
+        }
+
+        ## mock s3
+        ### setup test object for request_bucket
+        app.aws_s3.create_bucket(Bucket=args.request_bucket)
+        app.aws_s3.put_object(Body=dumps(request),
+                               Bucket=app.request_bucket, 
+                               Key=request['requestId'])
+
+        # exercise
+        test_request = app._get_request_s3()
+
+        # verify
+        assert request == test_request
 
     def test_errored_get_request(self):
-        NotImplementedError()
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## mock s3
+        ### setup test object for request_bucket
+        app.aws_s3.create_bucket(Bucket=args.request_bucket)
+        # exercise
+        test_request = app._get_request_s3()
+
+        # verify
+        assert { 'type' : 'unknown' } == test_request
 
 # @mock_aws
 # class TestWidgetConsumerGetRequestsQueue:
