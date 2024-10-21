@@ -151,15 +151,15 @@ class WidgetConsumer(WidgetAppBase):
         return True
 
     def process_request(self, request:dict) -> bool:
-        # if request['type'] == 'create':
-        #     return create_widget(request)
+        if request['type'] == 'create':
+            return self.create_widget(request)
         # if request['type'] == 'update':
-        #     return update_widget(request)
-        # if request['delete'] == 'delete':
-        #     return delete_widget(request)
-        # else
-        #     throw ERROR stating unknown request type
-        return NotImplementedError()
+        #     return self.update_widget(request)
+        # if request['type'] == 'delete':
+        #     return self.delete_widget(request)
+        else:
+            raise ValueError('Cannot process request due to unkown request type: %s', 
+                             request['type'])
 
     def create_widget(self, request:dict) -> bool:
         if self.widget_bucket is not None:
