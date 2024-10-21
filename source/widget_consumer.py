@@ -118,28 +118,58 @@ class WidgetConsumer(WidgetAppBase):
 
         return True
 
-    def get_requests_from_bucket(self):
+    def consume_requests(self):
         NotImplementedError()
-        # time_running_ms:int = 0
-        # DO
+        # Assume we are not suppose to be running forever unless otherwise specified
+        # infinite_runtime:bool = True if self.max_runtime == 0 else False
+        # done:bool = False
+        # while not done:
         #     try:
-        #         GET request from s3 bucket
-        #         CONVERT request to json
-        #         if not delete_request(request);
-        #             continue # Error already logged, return
-        #         if request is successful:
-        #             if not process_request(request):
-        #                 self.logger.info(f'{request['type']} request processed successfully')
+        #         request = self._get_request():
+        #         if not self._delete_request(request);
+        #             continue # Error already logged from _delete_request, continue on
+        #         if not process_request(request):
+        #             self.logger.info(f'{request['type']} request processed successfully')
         #         time.sleep(100)
-        #     EXCEPT ERROR about unknown request type
-        #         log error and continue loop
-        #     EXCEPT Ctrl+C 
-        #         self.error.info('Ctrl+C detected. Shutting Down consumer...')
+        #     except ValueError:
+        #         continue # Error already logged somewhere, continue on
+        #     except Ctrl+C :
+        #         self.logger.info('Ctrl+C detected. Shutting Down consumer...')
         #         return
-        #     except Exception as e:
+        #     except Exception as e: # Some unknown error occured, do not continue running!
         #         self.logger.error(e)
         #         return
-        # WHILE time_running_ms != 0 and time_running_ms < self.max_runtime
+        #     
+        #     # Consumer is only suppose to run until max_runtime is hit (unless infinite)
+        #     if not infinite_runtime and time_running_ms < self.max_runtime:
+        #         done = True
+
+    def _get_request(self) -> dict:
+        # if self.request_bucket is not None:
+        #     return self._get_request_s3()
+        # if self.request_queue_url is not None:
+        #     return self._get_request_queue()
+        # 
+        # return { 'type': 'unknown' } # Take advantage of our error handling above
+        NotImplementedError()
+
+    def _get_request_s3(self) -> dict:
+        # try:
+        #     # Get the first object key in the bucket since we don't know it
+        #     response = self.aws_s3.list_buckets_v2(Bucket=self.request_bucket, MaxKeys=1)
+        #     key = response['Contents'][0]['Key']
+        #     
+        #     # Now that we have the key, get the actual request and return it
+        #     response = self.aws_s3.get_object(Bucket=self.request_bucket, Key=)
+        #     return loads(response["Body"].read())
+        # except ClientError as e:
+        #     self.logger.warning(e)
+        #
+        # return { 'type': 'unknown' }
+        NotImplementedError()
+
+    def _get_request_queue(self) -> dict:
+        NotImplementedError()
 
     def _delete_request(self, request:dict) -> bool:
         try:

@@ -96,12 +96,35 @@ class TestWidgetConsumerVerifyArguments:
             app.verify_arguments(args)
 
 @mock_aws
-class TestWidgetConsumerGetRequestsFromBucket:
+class TestWidgetConsumerconsumeRequests:
     def test_bad_get_widget_request():
         NotImplementedError()
 
     def test_bad_delete_request():
         NotImplementedError()
+
+class TestWidgetConsumerGetRequest:
+    def test_get_request_s3(self):
+        NotImplementedError()
+
+    # def test_get_request_queue(self):
+    #     NotImplementedError()
+
+@mock_aws
+class TestWidgetConsumerGetRequestS3:
+    def test_valid_get_request(self):
+        NotImplementedError()
+
+    def test_errored_get_request(self):
+        NotImplementedError()
+
+# @mock_aws
+# class TestWidgetConsumerGetRequestsQueue:
+#     def test_valid_get_request(self):
+#         NotImplementedError()
+
+#     def test_errored_get_request(self):
+#         NotImplementedError()
 
 @mock_aws
 class TestWidgetConsumerDeleteRequest:
