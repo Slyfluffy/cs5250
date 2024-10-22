@@ -11,6 +11,16 @@
 
 To run the unit tests, use `python3 -m pytest` at the root of the repo.
 
+## Running the consumer
+
+To run the consumer using the S3 request bucket and S3 web bucket, do the following from the `source` folder:
+
+`python3 widget_consumer.py -rb {request-bucket} -wb {widget-bucket}`
+
+For DynamoDb, do the following:
+
+`python3 widget_consumer.py -rb {request-bucket} -dwt {dynamodb-table-name}`
+
 ## Resource links
 
 * [python argparse](https://docs.python.org/3/library/argparse.html)
