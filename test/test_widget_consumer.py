@@ -360,6 +360,7 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
         ## request
         request:dict[str, str] = {
             'owner': 'tester',
+            'requestId': '1',
             'widgetId': '1'
         }
 
@@ -367,14 +368,14 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
         app.aws_dynamodb.create_table(
             AttributeDefinitions=[
                 {
-                    'AttributeName': 'widgetId',
+                    'AttributeName': 'id',
                     'AttributeType': 'S'
                 },
             ],
             TableName=args.dynamodb_widget_table,
             KeySchema=[
                 {
-                    'AttributeName': 'widgetId',
+                    'AttributeName': 'id',
                     'KeyType': 'HASH'
                 },
             ],

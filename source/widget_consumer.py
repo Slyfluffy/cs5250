@@ -240,6 +240,11 @@ class WidgetConsumer(WidgetAppBase):
 
     def _create_widget_dynamodb(self, request:dict) -> bool:
         try:
+            request.pop('requestId') # don't need this one either
+            # Adjust the id before sending it to dynamodb
+            request['id'] = request.pop('widgetId')
+
+            # Then go and save it
             self.aws_dynamodb_table.put_item(Item=request)
         except Exception as e:
             self.logger.warning(e)
