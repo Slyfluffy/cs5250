@@ -3,14 +3,16 @@ needed to work with AWS.
 '''
 
 from argparse import ArgumentParser
-from logging import Logger
+from logging import getLogger, StreamHandler
+from sys import stdout
 
 class WidgetAppBase():
     '''Base class for all Widget Apps. Contains the needed data to work with AWS, as well as shared
     app defaults.
     '''
     def __init__(self) -> None:
-        self.logger = Logger('WidgetAppBase')
+        self.logger = getLogger(__name__)
+        self.logger.addHandler(StreamHandler(stdout))
 
     def _verify_base_arguments(self, args: object) -> bool:
         '''Verifies that the base needed arguments are met. If they are not, throws an error.

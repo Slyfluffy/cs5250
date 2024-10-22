@@ -4,7 +4,7 @@ from moto import mock_aws
 from pytest import raises
 
 from source.widget_consumer import WidgetConsumer
-from test_widget_app_base import BaseArgReplica
+from test.test_widget_app_base import BaseArgReplica
 
 class ConsumerArgReplica(BaseArgReplica):
     def __init__(self) -> None:
@@ -96,14 +96,6 @@ class TestWidgetConsumerVerifyArguments:
             app.verify_arguments(args)
 
 @mock_aws
-class TestWidgetConsumerconsumeRequests:
-    def test_bad_get_widget_request(self):
-        NotImplementedError()
-
-    def test_bad_delete_request(self):
-        NotImplementedError()
-
-@mock_aws
 class TestWidgetConsumerGetRequestS3:
     def test_valid_get_request(self):
         # setup
@@ -121,7 +113,7 @@ class TestWidgetConsumerGetRequestS3:
         request:dict[str, str] = {
             'owner': 'tester',
             'widgetId': '1',
-            'requestId': '1',
+            'request-bucket-key': '1',
             'type': 'create'
         }
 
@@ -130,7 +122,7 @@ class TestWidgetConsumerGetRequestS3:
         app.aws_s3.create_bucket(Bucket=args.request_bucket)
         app.aws_s3.put_object(Body=dumps(request),
                                Bucket=app.request_bucket, 
-                               Key=request['requestId'])
+                               Key=request['request-bucket-key'])
 
         # exercise
         test_request = app._get_request_s3()
@@ -185,7 +177,7 @@ class TestWidgetConsumerDeleteRequest:
         request:dict[str, str] = {
             'owner': 'tester',
             'widgetId': '1',
-            'requestId': '1'
+            'request-bucket-key': '1'
         }
         
         ## mock s3
@@ -194,7 +186,7 @@ class TestWidgetConsumerDeleteRequest:
         ## Prep bucket to delete
         app.aws_s3.put_object(Body=dumps(request), 
                               Bucket=args.request_bucket, 
-                              Key=request['requestId'])
+                              Key=request['request-bucket-key'])
 
         # exercise and verify
         assert app._delete_request(request)
@@ -215,7 +207,7 @@ class TestWidgetConsumerDeleteRequest:
         request:dict[str, str] = {
             'owner': 'tester',
             'widgetId': '1',
-            'requestId': '2'
+            'request-bucket-key': '2'
         }
         
         ## mock s3
@@ -224,7 +216,7 @@ class TestWidgetConsumerDeleteRequest:
         ## Prep bucket to delete
         app.aws_s3.put_object(Body=dumps(request), 
                               Bucket=args.request_bucket, 
-                              Key=request['requestId'])
+                              Key=request['request-bucket-key'])
 
         # exercise and verify
         assert app._delete_request(request)

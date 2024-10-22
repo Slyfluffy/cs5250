@@ -2,13 +2,20 @@ from argparse import ArgumentParser
 from boto3 import client, resource
 from botocore.exceptions import ClientError
 from json import dumps, loads
+from logging import basicConfig, INFO
 
-from source.widget_app_base import WidgetAppBase
+from time import sleep
+from timeit import default_timer
+
+from widget_app_base import WidgetAppBase
+
+DEBUG_LEVEL = INFO
 
 class WidgetConsumer(WidgetAppBase):
     def __init__(self) -> None:
         super().__init__()
-        self.logger.name = 'consumer_logger'
+        basicConfig(filename='../log/consumer.log', level=DEBUG_LEVEL)
+        self.logger.name = 'consumer_logger'      
 
     def get_consumer_parser(self) -> ArgumentParser:
         '''Returns the parser for the consumer'''
@@ -52,7 +59,7 @@ class WidgetConsumer(WidgetAppBase):
                             type=str,
                             default=None,
                             help='Postgres Database password (default: %(default)s)')
-        parser.add_argument('-qwt', '--queue-wait-time',
+        parser.add_argument('-qwt', '--queue-wait-timeout',
                             action='store',
                             type=int,
                             default=10,
@@ -73,7 +80,6 @@ class WidgetConsumer(WidgetAppBase):
         '''Verifies that all arguments that can be validated are checked and verified to be good
         options. Returns true if all are valid, otherwise raises an error.'''
         if not self._verify_base_arguments(args):
-            print("returned!")
             return False
         if args.max_runtime > 0:
             self.logger.error('max_runtime tried to be set as negative for some reason')
@@ -119,30 +125,36 @@ class WidgetConsumer(WidgetAppBase):
         return True
 
     def consume_requests(self):
-        NotImplementedError()
+        self._create_service_clients()
+        start_time = default_timer()
+
         # Assume we are not suppose to be running forever unless otherwise specified
-        # infinite_runtime:bool = True if self.max_runtime == 0 else False
-        # done:bool = False
-        # while not done:
-        #     try:
-        #         request = self._get_request():
-        #         if not self._delete_request(request);
-        #             continue # Error already logged from _delete_request, continue on
-        #         if not process_request(request):
-        #             self.logger.info(f'{request['type']} request processed successfully')
-        #         time.sleep(100)
-        #     except ValueError:
-        #         continue # Error already logged somewhere, continue on
-        #     except Ctrl+C :
-        #         self.logger.info('Ctrl+C detected. Shutting Down consumer...')
-        #         return
-        #     except Exception as e: # Some unknown error occured, do not continue running!
-        #         self.logger.error(e)
-        #         return
-        #     
-        #     # Consumer is only suppose to run until max_runtime is hit (unless infinite)
-        #     if not infinite_runtime and time_running_ms < self.max_runtime:
-        #         done = True
+        infinite_runtime:bool = True if self.max_runtime == 0 else False
+        done:bool = False
+
+        self.logger.info('Consumer ready. Waiting for requests...')
+        while not done:
+            try:
+                request = self._get_request()
+                self.logger.info('Received request: %s', request)
+                if not self._delete_request(request):
+                    continue # Error already logged from _delete_request, continue on
+                if not self.process_request(request):
+                    self.logger.info(f'{request['type']} request processed successfully')
+                sleep(.01) # 100 milliseconds
+            except ValueError:
+                continue # Error already logged somewhere, continue on
+            except KeyboardInterrupt:
+                self.logger.info('\nCtrl+C detected. Shutting Down consumer...')
+                return
+            except Exception as e: # Some unknown error occured, do not continue running!
+                self.logger.error(e)
+                return
+            
+            # Consumer is only suppose to run until max_runtime is hit (unless infinite)
+            current_runtime = (default_timer() - start_time) * 1000
+            if not infinite_runtime and current_runtime < self.max_runtime:
+                done = True
 
     def _get_request(self) -> dict:
         if self.request_bucket is not None:
@@ -160,12 +172,18 @@ class WidgetConsumer(WidgetAppBase):
             # Get the first object key in the bucket since we don't know it
             response = self.aws_s3.list_objects_v2(Bucket=self.request_bucket, MaxKeys=1)
             key = response['Contents'][0]['Key']
+            self.logger.debug('Found widget key: %s', key)
             
             # Now that we have the key, get the actual request and return it
+            self.logger.debug('Getting object using key: %s', key)
             response = self.aws_s3.get_object(Bucket=self.request_bucket, Key=key)
-            return loads(response["Body"].read())
+            request = loads(response["Body"].read())
+            request['request-bucket-key'] = key
+            return request
+        except KeyError:
+            self.logger.warning('No requests found. Please wait until some more are complete')
         except Exception as e:
-            self.logger.warning(e)
+            self.logger.warning('Issue when getting request from s3: %s', e)
         
         return { 'type': 'unknown' }
 
@@ -174,8 +192,10 @@ class WidgetConsumer(WidgetAppBase):
 
     def _delete_request(self, request:dict) -> bool:
         try:
-            self.aws_s3.delete_object(Bucket=self.request_bucket,Key=request['requestId'])
-        except ClientError as e:
+            self.logger.debug('Deleting Request: %s', request['request-bucket-key'])
+            self.aws_s3.delete_object(Bucket=self.request_bucket,Key=request['request-bucket-key'])
+            self.logger.debug('Request Deleted!')
+        except Exception as e:
             self.logger.error(e)
             return False
         
@@ -183,28 +203,35 @@ class WidgetConsumer(WidgetAppBase):
 
     def process_request(self, request:dict) -> bool:
         if request['type'] == 'create':
+            self.logger.info('Request type is create. Creating widget...')
             return self.create_widget(request)
         # if request['type'] == 'update':
+        #     self.logger.info('Request type is update. Updating widget...')
         #     return self.update_widget(request)
         # if request['type'] == 'delete':
+        #     self.logger.info('Request type is delete. Deleting widget...')
         #     return self.delete_widget(request)
         else:
-            raise ValueError('Cannot process request due to unkown request type: %s', 
+            raise ValueError('Cannot process request due to unknown request type: %s', 
                              request['type'])
 
     def create_widget(self, request:dict) -> bool:
         if self.widget_bucket is not None:
+            self.logger.info('Saving widget to S3')
             return self._create_widget_s3(request)
         if self.dynamodb_widget_table is not None:
+            self.logger.info('Saving widget to DynamoDB')
             return self._create_widget_dynamodb(request)
 
     def _create_widget_s3(self, request:dict) -> bool:
         key:str = self.widget_key_prefix
         if self.use_owner_in_prefix:
            key += (request['owner'] + '/')
-        key += request['widgetId']
+        key += str(request['widgetId'])
         try:
+            self.logger.debug('Placing object into s3 using key: %s', key)
             self.aws_s3.put_object(Body=dumps(request), Bucket=self.widget_bucket, Key=key)
+            self.logger.debug('Saved!')
         except ClientError as e:
             self.logger.warning(e)
             return False
@@ -229,7 +256,10 @@ class WidgetConsumer(WidgetAppBase):
 if __name__ == '__main__':
     app = WidgetConsumer()
     parser = app.get_consumer_parser()
-    parser.print_help()
 
+    # Prep app with arguments
     args = parser.parse_args()
-    print(args)
+    app.verify_arguments(args)
+    app.save_arguments(args)
+
+    app.consume_requests()
