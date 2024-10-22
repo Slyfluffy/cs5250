@@ -1,5 +1,9 @@
 # Readme
 
+## Setup
+
+Run the folder in a devcontainer, then install the pip packages below.
+
 ## pip packages
 
 * boto3
