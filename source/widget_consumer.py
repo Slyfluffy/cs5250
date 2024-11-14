@@ -255,7 +255,25 @@ class WidgetConsumer(WidgetAppBase):
     def update_widget(request:dict) -> bool:
         NotImplementedError()
 
-    def delete_Widget(request:dict) -> bool:
+    def delete_widget(self, request:dict) -> bool:
+        NotImplementedError()
+
+    def _delete_widget_s3(self, request:dict) -> bool:
+        key:str = self.widget_key_prefix
+        if self.use_owner_in_prefix:
+           key += (request['owner'] + '/')
+        key += str(request['widgetId'])
+        try:
+            self.logger.debug('Deleting Request: %s', request['request-bucket-key'])
+            self.aws_s3.delete_object(Bucket=self.widget_bucket,Key=key)
+            self.logger.debug('Request Deleted!')
+        except ClientError as e:
+            self.logger.warning(e)
+            return False
+        
+        return True
+
+    def delete_widget_dynamodb(self, request:dict) -> bool:
         NotImplementedError()
 
 if __name__ == '__main__':
