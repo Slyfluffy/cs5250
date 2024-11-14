@@ -440,7 +440,7 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
 
 @mock_aws
 class TestWidgetConsumerDeleteRequestS3:
-    def test_delete_widget_s3_mocked_no_name_in_prefix(self):
+    def test_delete_widget_s3_no_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -468,7 +468,7 @@ class TestWidgetConsumerDeleteRequestS3:
         # exercise and verify
         assert app._delete_widget_s3(request)
 
-    def test_delete_widget_s3_mocked_name_in_prefix(self):
+    def test_delete_widget_s3_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -501,7 +501,7 @@ class TestWidgetConsumerDeleteRequestS3:
         with raises(ClientError):
             app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
 
-    def test_delete_widget_s3_mocked_bad_request(self):
+    def test_delete_widget_s3_bad_request(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -525,6 +525,31 @@ class TestWidgetConsumerDeleteRequestS3:
         app.aws_s3.put_object(Body=dumps(request), 
                                Bucket='test', 
                                Key=request['widgetId'])
+
+        # exercise and verify
+        assert not app._delete_widget_s3(request)
+
+    def test_delete_widget_s3_no_object(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.widget_bucket = 'test-bucket'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_s3 = client('s3', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock s3
+        app.aws_s3.create_bucket(Bucket=args.request_bucket)
 
         # exercise and verify
         assert not app._delete_widget_s3(request)
