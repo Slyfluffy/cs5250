@@ -264,7 +264,7 @@ class WidgetConsumer(WidgetAppBase):
            key += (request['owner'] + '/')
         key += str(request['widgetId'])
         try:
-            self.logger.debug('Deleting Request: %s', request['request-bucket-key'])
+            self.logger.debug('Deleting Request: %s', key)
             self.aws_s3.delete_object(Bucket=self.widget_bucket,Key=key)
             self.logger.debug('Request Deleted!')
         except ClientError as e:
