@@ -125,6 +125,7 @@ class WidgetConsumer(WidgetAppBase):
         return True
 
     def consume_requests(self):
+        '''Runner for Consumer. Consumes requests as they come in.'''
         self._create_service_clients()
         start_time = default_timer()
 
@@ -157,6 +158,9 @@ class WidgetConsumer(WidgetAppBase):
                 done = True
 
     def _get_request(self) -> dict:
+        '''Retrieves the request from either an S3 bucket or a queue. If both are setup, defaults
+        to using the bucket and not the queue.
+        '''
         if self.request_bucket is not None:
             return self._get_request_s3()
         if self.request_queue_url is not None:
@@ -168,6 +172,7 @@ class WidgetConsumer(WidgetAppBase):
         return { 'type': 'unknown' } # Take advantage of our error handling above
 
     def _get_request_s3(self) -> dict:
+        '''Retrieves a Widget request from S3'''
         try:
             # Get the first object key in the bucket since we don't know it
             response = self.aws_s3.list_objects_v2(Bucket=self.request_bucket, MaxKeys=1)
@@ -188,18 +193,27 @@ class WidgetConsumer(WidgetAppBase):
         return { 'type': 'unknown' }
 
     def _get_request_queue(self) -> dict:
+        '''Retrieves a request from the queue'''
         NotImplementedError()
 
-    def _delete_request(self, request:dict) -> bool:
+    def _delete_object_S3(self, bucket:str, key:str) -> bool:
+        '''Actual implementation for any delete requests to an S3 bucket.'''
         try:
-            self.logger.debug('Deleting Request: %s', request['request-bucket-key'])
-            self.aws_s3.delete_object(Bucket=self.request_bucket,Key=request['request-bucket-key'])
+            self.logger.debug('Deleting Request: %s', key)
+            self.aws_s3.delete_object(Bucket=bucket,Key=key)
             self.logger.debug('Request Deleted!')
         except Exception as e:
             self.logger.error(e)
             return False
         
         return True
+
+    def _delete_request(self, request:dict) -> bool:
+        '''Deletes the request from dynamodb or the queue depending on what is being used.'''
+        if self.request_bucket is not None:
+            return self._delete_object_S3(request['request-bucket-key'])
+        # if self.request_queue_url is not None:
+        #     retu
 
     def process_request(self, request:dict) -> bool:
         if request['type'] == 'create':
@@ -263,18 +277,20 @@ class WidgetConsumer(WidgetAppBase):
         if self.use_owner_in_prefix:
            key += (request['owner'] + '/')
         key += str(request['widgetId'])
+        return self._delete_object_S3(self.widget_bucket, key)
+
+    def _delete_widget_dynamodb(self, request:dict) -> bool:
         try:
-            self.logger.debug('Deleting Request: %s', key)
-            self.aws_s3.delete_object(Bucket=self.widget_bucket,Key=key)
-            self.logger.debug('Request Deleted!')
-        except ClientError as e:
+            key:dict = { 'id': request['widgetId']}
+            self.aws_dynamodb_table.delete_item(
+                Key=key,
+                ConditionExpression='attribute_exists'
+            )
+        except Exception as e:
             self.logger.warning(e)
             return False
         
         return True
-
-    def delete_widget_dynamodb(self, request:dict) -> bool:
-        NotImplementedError()
 
 if __name__ == '__main__':
     app = WidgetConsumer()
