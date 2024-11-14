@@ -529,5 +529,104 @@ class TestWidgetConsumerDeleteRequestS3:
         # exercise and verify
         assert not app._delete_widget_s3(request)
 
-# @mock_aws
-# class TestWidgetConsumerDeleteRequestDynamoDB:
+@mock_aws
+class TestWidgetConsumerDeleteRequestDynamoDB:
+    def test_valid_delete_widget_dynamodb(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.dynamodb_widget_table = 'test-table'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_dynamodb = client('dynamodb', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock dynamodb
+        app.aws_dynamodb.create_table(
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'id',
+                    'AttributeType': 'S'
+                },
+            ],
+            TableName=args.dynamodb_widget_table,
+            KeySchema=[
+                {
+                    'AttributeName': 'id',
+                    'KeyType': 'HASH'
+                },
+            ],
+            BillingMode='PROVISIONED',
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 1,
+                'WriteCapacityUnits': 1
+            },
+        )
+        add_request = request
+        add_request['id'] = request['widgetId']
+        app.aws_dynamodb_table.put_item(Item=add_request)
+
+        # exercise and verify
+        assert app._delete_widget_dynamodb(request)
+        response:dict = app.aws_dynamodb_table.get_item(TableName=args.dynamodb_widget_table,
+                                                   Key={ 'id': request['id']})
+        assert 'Item' not in response.keys()
+
+    def test_invalid_delete_widget_dynamodb(self):
+        # setup
+        ## args
+        args = ConsumerArgReplica()
+        args.request_bucket = 'test'
+        args.dynamodb_widget_table = 'test-table'
+
+        ## app
+        app = WidgetConsumer()
+        app.save_arguments(args)
+        app._create_service_clients()
+        app.aws_dynamodb = client('dynamodb', region_name='us-east-1')
+
+        ## request
+        request:dict[str, str] = {
+            'owner': 'tester',
+            'widgetId': '1'
+        }
+
+        ## mock dynamodb
+        app.aws_dynamodb.create_table(
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'id',
+                    'AttributeType': 'S'
+                },
+            ],
+            TableName=args.dynamodb_widget_table,
+            KeySchema=[
+                {
+                    'AttributeName': 'id',
+                    'KeyType': 'HASH'
+                },
+            ],
+            BillingMode='PROVISIONED',
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 1,
+                'WriteCapacityUnits': 1
+            },
+        )
+        add_request = request
+        add_request['id'] = '2'
+        app.aws_dynamodb_table.put_item(Item=add_request)
+
+        # exercise and verify
+        assert not app._delete_widget_dynamodb(request)
+        response:dict = app.aws_dynamodb_table.get_item(TableName=args.dynamodb_widget_table,
+                                                   Key={ 'id': request['id']})
+        assert 'Item' in response.keys()
