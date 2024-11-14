@@ -1,4 +1,5 @@
 from boto3 import client
+from botocore.exceptions import ClientError
 from json import dumps
 from moto import mock_aws
 from pytest import raises
@@ -288,7 +289,7 @@ class TestWidgetConsumerCreateWidgetS3:
         assert app._create_widget_s3(request)
 
         # exercise and verify
-        app.aws_s3.get_object(Bucket=args.widget_bucket, Key='tester/1')
+        app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/1')
         assert True # We got a response so we are good
 
     def test_create_widget_s3_mocked_name_in_prefix(self):
@@ -467,7 +468,7 @@ class TestWidgetConsumerDeleteRequestS3:
         # exercise and verify
         assert app._delete_widget_s3(request)
 
-    def test_create_widget_s3_mocked_name_in_prefix(self):
+    def test_delete_widget_s3_mocked_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -497,10 +498,10 @@ class TestWidgetConsumerDeleteRequestS3:
         assert app._delete_widget_s3(request)
 
         # exercise and verify
-        app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
-        assert True # We got a response so we are good
+        with raises(ClientError):
+            app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
 
-    def test_create_widget_s3_mocked_bad_request(self):
+    def test_delete_widget_s3_mocked_bad_request(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -522,7 +523,7 @@ class TestWidgetConsumerDeleteRequestS3:
         ## mock s3
         app.aws_s3.create_bucket(Bucket='test')
         app.aws_s3.put_object(Body=dumps(request), 
-                               Bucket=args.widget_bucket, 
+                               Bucket='test', 
                                Key=request['widgetId'])
 
         # exercise and verify
