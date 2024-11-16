@@ -218,7 +218,7 @@ class WidgetConsumer(WidgetAppBase):
     def _delete_request(self, request:dict) -> bool:
         '''Deletes the request from dynamodb or the queue depending on what is being used.'''
         if self.request_bucket is not None:
-            return self._delete_object_S3(request['request-bucket-key'])
+            return self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
         if self.request_queue_url is not None:
             return self._delete_request_from_queue(request)
 
@@ -228,10 +228,10 @@ class WidgetConsumer(WidgetAppBase):
         '''
         if request['type'] == 'create':
             self.logger.info('Request type is create. Creating widget...')
-            return self.create_widget(request)
-        # if request['type'] == 'update':
-        #     self.logger.info('Request type is update. Updating widget...')
-        #     return self.update_widget(request)
+            return self.update_widget(request)
+        if request['type'] == 'update':
+            self.logger.info('Request type is update. Updating widget...')
+            return self.update_widget(request)
         if request['type'] == 'delete':
             self.logger.info('Request type is delete. Deleting widget...')
             return self.delete_widget(request)
@@ -239,17 +239,17 @@ class WidgetConsumer(WidgetAppBase):
             raise ValueError('Cannot process request due to unknown request type: %s', 
                              request['type'])
 
-    def create_widget(self, request:dict) -> bool:
-        '''Creates a widget in S3 or dynamodb depending on passed args.'''
+    def update_widget(self, request:dict) -> bool:
+        '''Creates or replaces a widget in S3 or dynamodb depending on passed args.'''
         if self.widget_bucket is not None:
             self.logger.info('Saving widget to S3')
-            return self._create_widget_s3(request)
+            return self._update_widget_s3(request)
         if self.dynamodb_widget_table is not None:
             self.logger.info('Saving widget to DynamoDB')
-            return self._create_widget_dynamodb(request)
+            return self._update_widget_dynamodb(request)
 
-    def _create_widget_s3(self, request:dict) -> bool:
-        '''Base function to create the widget in S3'''
+    def _update_widget_s3(self, request:dict) -> bool:
+        '''Base function to create/replace the widget in S3'''
         key:str = self.widget_key_prefix
         if self.use_owner_in_prefix:
            key += (request['owner'] + '/')
@@ -264,8 +264,8 @@ class WidgetConsumer(WidgetAppBase):
         
         return True
 
-    def _create_widget_dynamodb(self, request:dict) -> bool:
-        '''Base function to create the widget in dynamodb'''
+    def _update_widget_dynamodb(self, request:dict) -> bool:
+        '''Base function to create/replace the widget in dynamodb'''
         try:
             request.pop('requestId') # don't need this one either
             # Adjust the id before sending it to dynamodb
@@ -278,15 +278,6 @@ class WidgetConsumer(WidgetAppBase):
             return False
         
         return True
-
-    def update_widget(request:dict) -> bool:
-        NotImplementedError()
-
-    def _update_widget_s3(self, request:dict) -> bool:
-        NotImplementedError()
-
-    def _update_widget_dynamodb(self, request:dict) -> bool:
-        NotImplementedError()
 
     def delete_widget(self, request:dict) -> bool:
         '''Deletes the widget from S3 or Dynamodb according to the request and args passed.'''
@@ -311,7 +302,7 @@ class WidgetConsumer(WidgetAppBase):
             key:dict = { 'id': request['widgetId']}
             self.aws_dynamodb_table.delete_item(
                 Key=key,
-                ConditionExpression='attribute_exists'
+                ConditionExpression='attribute_exists(id)'
             )
         except Exception as e:
             self.logger.warning(e)

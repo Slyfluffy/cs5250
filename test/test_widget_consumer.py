@@ -223,7 +223,7 @@ class TestWidgetConsumerDeleteRequest:
         assert app._delete_request(request)
 
 class TestWidgetConsumerProcessRequest:
-    def test_valid_create_widget_request(self, mocker):
+    def test_valid_update_widget_request(self, mocker):
         # setup
         ## request
         request:dict[str, str] = {
@@ -232,9 +232,9 @@ class TestWidgetConsumerProcessRequest:
             'widgetId': '1',
         }
 
-        # app (mock the create_widget function so we don't do all the work)
+        # app (mock the update_widget function so we don't do all the work)
         app = WidgetConsumer()
-        mocker.patch.object(app, 'create_widget', return_value=True)
+        mocker.patch.object(app, 'update_widget', return_value=True)
         
         # Exercise and Verify
         assert app.process_request(request)
@@ -254,7 +254,7 @@ class TestWidgetConsumerProcessRequest:
             'widgetId': '1',
         }
 
-        # app (mock the create_widget function so we don't do all the work)
+        # app (mock the update_widget function so we don't do all the work)
         app = WidgetConsumer()
         
         # Exercise and Verify
@@ -262,8 +262,8 @@ class TestWidgetConsumerProcessRequest:
             app.process_request(request)
 
 @mock_aws
-class TestWidgetConsumerCreateWidgetS3:
-    def test_create_widget_s3_mocked_no_name_in_prefix(self):
+class TestWidgetConsumerUpdateWidgetS3:
+    def test_update_widget_s3_mocked_no_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -286,13 +286,13 @@ class TestWidgetConsumerCreateWidgetS3:
         app.aws_s3.create_bucket(Bucket=args.widget_bucket)
 
         # exercise and verify
-        assert app._create_widget_s3(request)
+        assert app._update_widget_s3(request)
 
         # exercise and verify
         app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/1')
         assert True # We got a response so we are good
 
-    def test_create_widget_s3_mocked_name_in_prefix(self):
+    def test_update_widget_s3_mocked_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -316,13 +316,13 @@ class TestWidgetConsumerCreateWidgetS3:
         app.aws_s3.create_bucket(Bucket=args.widget_bucket)
 
         # exercise and verify
-        assert app._create_widget_s3(request)
+        assert app._update_widget_s3(request)
 
         # exercise and verify
         app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
         assert True # We got a response so we are good
 
-    def test_create_widget_s3_mocked_bad_request(self):
+    def test_update_widget_s3_mocked_bad_request(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -345,11 +345,11 @@ class TestWidgetConsumerCreateWidgetS3:
         app.aws_s3.create_bucket(Bucket='test')
 
         # exercise and verify
-        assert not app._create_widget_s3(request)
+        assert not app._update_widget_s3(request)
 
 @mock_aws
-class TestWidgetConsumerCreateWidgetDynamoDB:
-    def test_valid_create_widget_dynamodb(self):
+class TestWidgetConsumerUpdateWidgetDynamoDB:
+    def test_valid_update_widget_dynamodb(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -392,9 +392,9 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
         )
 
         # exercise and verify
-        assert app._create_widget_dynamodb(request)
+        assert app._update_widget_dynamodb(request)
 
-    def test_invalid_create_widget_dynamodb(self):
+    def test_invalid_update_widget_dynamodb(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -436,7 +436,7 @@ class TestWidgetConsumerCreateWidgetDynamoDB:
         )
 
         # exercise and verify
-        assert not app._create_widget_dynamodb(request)
+        assert not app._update_widget_dynamodb(request)
 
 @mock_aws
 class TestWidgetConsumerDeleteRequestS3:
