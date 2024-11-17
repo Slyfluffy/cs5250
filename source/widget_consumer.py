@@ -3,9 +3,9 @@ from boto3 import client, resource
 from botocore.exceptions import ClientError
 from json import dumps, loads
 from logging import basicConfig, INFO
-
 from time import sleep
 from timeit import default_timer
+from queue import Queue
 
 from widget_app_base import WidgetAppBase
 
@@ -14,8 +14,11 @@ DEBUG_LEVEL = INFO
 class WidgetConsumer(WidgetAppBase):
     def __init__(self) -> None:
         super().__init__()
-        basicConfig(filename='../log/consumer.log', level=DEBUG_LEVEL)
-        self.logger.name = 'consumer_logger'      
+        basicConfig(filename='log/consumer.log', level=DEBUG_LEVEL)
+        self.logger.name = 'consumer_logger'
+        # Only instantiate this if needed
+        self.request_queue:Queue = None 
+        self.receipt_handle_queue:Queue = None
 
     def get_consumer_parser(self) -> ArgumentParser:
         '''Returns the parser for the consumer'''
@@ -37,7 +40,7 @@ class WidgetConsumer(WidgetAppBase):
         parser.add_argument('-wkp', '--widget-key-prefix',
                             action='store',
                             type=str,
-                            default='\'widgets/\'',
+                            default='widgets/',
                             help='Prefix for widget objects in S3 (default: %(default)s)')
         parser.add_argument('-dwt', '--dynamodb-widget-table',
                             action='store',
@@ -91,6 +94,10 @@ class WidgetConsumer(WidgetAppBase):
             self.logger.error('no widget save location was set before trying to use.')
             raise ValueError('widget-bucket, dynamodb-widget-table, or pdb-conn must be set in ' +
                 'to use WidgetConsumer!')
+        if args.request_bucket is not None and args.request_queue is not None:
+            self.logger.error('Both a request bucket and request queue were specified!')
+            raise Exception('Both a request bucket and request queue have been specified.' +
+                             'Please only use one or the other.')
         if args.queue_wait_timeout < 0:
             self.logger.error('queue_wait_timeout tried to be set as negative for some reason')
             raise ValueError()
@@ -102,11 +109,18 @@ class WidgetConsumer(WidgetAppBase):
         return True
 
     def _create_service_clients(self) -> bool:
-        '''Creates the services clients needed to run the consumer. This can be an S3 bucket or
-        dynamodb table depending on arguments passed.
+        '''Creates the services clients needed to run the consumer. This can be an S3 bucket or an
+        SQS queue for gathering requests and an S3 bucket or dynamodb table for storage depending
+        on arguments passed.
         '''
         if self.request_bucket is not None or self.widget_bucket is not None:
             self.aws_s3 = client('s3', region_name=self.region)
+        if self.request_queue_url is not None:
+            self.aws_sqs_queue = client('sqs', region_name=self.region)
+            # Guess we need the queue after all!
+            self.request_queue = Queue()
+            self.receipt_handle_queue = Queue()
+
         if self.dynamodb_widget_table is not None:
             self.aws_dynamodb = resource('dynamodb', region_name=self.region)
             self.aws_dynamodb_table = self.aws_dynamodb.Table(self.dynamodb_widget_table)
@@ -141,12 +155,16 @@ class WidgetConsumer(WidgetAppBase):
         while not done:
             try:
                 request = self._get_request()
-                self.logger.info('Received request: %s', request)
-                if not self._delete_request(request):
-                    continue # Error already logged from _delete_request, continue on
-                if not self.process_request(request):
+                self.logger.info('Received request of type %s: %s', request['type'], 
+                                 request['requestId'])
+                if self.request_bucket is not None:
+                    self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
+                if self.process_request(request):
                     self.logger.info(f'{request['type']} request processed successfully')
-                sleep(.01) # 100 milliseconds
+                    if self.request_queue_url is not None:
+                        self._delete_request_from_queue()
+                else:
+                    sleep(.01) # 100 milliseconds
             except ValueError:
                 continue # Error already logged somewhere, continue on
             except KeyboardInterrupt:
@@ -198,8 +216,29 @@ class WidgetConsumer(WidgetAppBase):
 
     def _get_request_queue(self) -> dict:
         '''Retrieves a request from the queue'''
-        NotImplementedError()
+        if not self.request_queue.empty(): # We are single-threaded for now, so this is ok.
+            return self.request_queue.get()
 
+        response = self.aws_sqs_queue.receive_message(
+            QueueUrl=self.request_queue_url,
+            MaxNumberOfMessages=10,
+            VisibilityTimeout=self.queue_visibility_timeout,
+            WaitTimeSeconds=self.queue_wait_timeout
+        )
+
+        for message in response['Messages']:
+            self.request_queue.put(loads(message["Body"]))
+            self.receipt_handle_queue.put(message['ReceiptHandle'])
+
+        return self.request_queue.get()
+
+    def _delete_request(self, request:dict) -> bool:
+        '''Deletes the request from dynamodb or the queue depending on what is being used.'''
+        if self.request_bucket is not None:
+            return self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
+        if self.request_queue_url is not None:
+            return self._delete_request_from_queue()
+        
     def _delete_object_S3(self, bucket:str, key:str) -> bool:
         '''Actual implementation for any delete requests to an S3 bucket.'''
         try:
@@ -212,15 +251,19 @@ class WidgetConsumer(WidgetAppBase):
         
         return True
     
-    def _delete_request_from_queue(self, request:dict) -> bool:
-        NotImplementedError()
-
-    def _delete_request(self, request:dict) -> bool:
-        '''Deletes the request from dynamodb or the queue depending on what is being used.'''
-        if self.request_bucket is not None:
-            return self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
-        if self.request_queue_url is not None:
-            return self._delete_request_from_queue(request)
+    def _delete_request_from_queue(self) -> bool:
+        try:
+            receipt_handle:str = self.receipt_handle_queue.get()
+            self.logger.debug('deleting message: %s', receipt_handle)
+            self.aws_sqs_queue.delete_message(
+                QueueUrl=self.request_queue_url,
+                ReceiptHandle=receipt_handle
+            )
+        except ClientError as e:
+            self.logger.error(e)
+            return False
+        
+        return True
 
     def process_request(self, request:dict) -> bool:
         '''Processes any create, update, or delete requests. Raises a ValueError if a request is not
