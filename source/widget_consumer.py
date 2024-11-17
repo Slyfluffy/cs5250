@@ -2,14 +2,15 @@ from argparse import ArgumentParser
 from boto3 import client, resource
 from botocore.exceptions import ClientError
 from json import dumps, loads
-from logging import basicConfig, INFO
+from logging import basicConfig, WARNING
+from threading import Thread
 from time import sleep
 from timeit import default_timer
-from queue import Queue
+from queue import Empty, Queue
 
 from widget_app_base import WidgetAppBase
 
-DEBUG_LEVEL = INFO
+DEBUG_LEVEL = WARNING
 
 class WidgetConsumer(WidgetAppBase):
     def __init__(self) -> None:
@@ -17,8 +18,7 @@ class WidgetConsumer(WidgetAppBase):
         basicConfig(filename='log/consumer.log', level=DEBUG_LEVEL)
         self.logger.name = 'consumer_logger'
         # Only instantiate this if needed
-        self.request_queue:Queue = None 
-        self.receipt_handle_queue:Queue = None
+        self.request_queue:Queue = None
 
     def get_consumer_parser(self) -> ArgumentParser:
         '''Returns the parser for the consumer'''
@@ -119,7 +119,6 @@ class WidgetConsumer(WidgetAppBase):
             self.aws_sqs_queue = client('sqs', region_name=self.region)
             # Guess we need the queue after all!
             self.request_queue = Queue()
-            self.receipt_handle_queue = Queue()
 
         if self.dynamodb_widget_table is not None:
             self.aws_dynamodb = resource('dynamodb', region_name=self.region)
@@ -143,7 +142,6 @@ class WidgetConsumer(WidgetAppBase):
         return True
 
     def consume_requests(self):
-        '''Runner for Consumer. Consumes requests as they come in.'''
         self._create_service_clients()
         start_time = default_timer()
 
@@ -154,17 +152,8 @@ class WidgetConsumer(WidgetAppBase):
         self.logger.info('Consumer ready. Waiting for requests...')
         while not done:
             try:
-                request = self._get_request()
-                self.logger.info('Received request of type %s: %s', request['type'], 
-                                 request['requestId'])
-                if self.request_bucket is not None:
-                    self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
-                if self.process_request(request):
-                    self.logger.info(f'{request['type']} request processed successfully')
-                    if self.request_queue_url is not None:
-                        self._delete_request_from_queue()
-                else:
-                    sleep(.01) # 100 milliseconds
+                self._consume_request_s3()
+                self._consume_requests_sqs()
             except ValueError:
                 continue # Error already logged somewhere, continue on
             except KeyboardInterrupt:
@@ -178,6 +167,40 @@ class WidgetConsumer(WidgetAppBase):
             current_runtime = (default_timer() - start_time) * 1000
             if not infinite_runtime and current_runtime < self.max_runtime:
                 done = True
+        
+        return
+    
+    def _consume_request_s3(self):
+        if self.request_bucket is None:
+            return 
+        
+        # Process requests from s3
+        request = self._get_request_s3()
+        self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
+        if self.process_request(request):
+            self.logger.info(f'{request['type']} request processed successfully')
+        else:
+            sleep(.01) # 100 milliseconds
+    
+    def _consume_requests_sqs(self):
+        if self.request_queue_url is None:
+            return
+
+        # process requests from queue
+        if not self._refill_request_queue():
+            self.logger.info("retrieved no Messages from queue")
+            return 
+        
+        threads = list[Thread]()
+        for _ in range(len(self.request_queue)):
+            thread = Thread(target=self.process_request_thread)
+            threads.append(thread)
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
 
     def _get_request(self) -> dict:
         '''Retrieves the request from either an S3 bucket or a queue. If both are setup, defaults
@@ -214,11 +237,7 @@ class WidgetConsumer(WidgetAppBase):
         
         return { 'type': 'unknown' }
 
-    def _get_request_queue(self) -> dict:
-        '''Retrieves a request from the queue'''
-        if not self.request_queue.empty(): # We are single-threaded for now, so this is ok.
-            return self.request_queue.get()
-
+    def _refill_request_queue(self) -> bool:
         response = self.aws_sqs_queue.receive_message(
             QueueUrl=self.request_queue_url,
             MaxNumberOfMessages=10,
@@ -226,11 +245,14 @@ class WidgetConsumer(WidgetAppBase):
             WaitTimeSeconds=self.queue_wait_timeout
         )
 
-        for message in response['Messages']:
-            self.request_queue.put(loads(message["Body"]))
-            self.receipt_handle_queue.put(message['ReceiptHandle'])
-
-        return self.request_queue.get()
+        try:
+            for message in response['Messages']:
+                self.request_queue.put(message)
+        except KeyError:
+            return False
+        
+        return True
+        
 
     def _delete_request(self, request:dict) -> bool:
         '''Deletes the request from dynamodb or the queue depending on what is being used.'''
@@ -251,9 +273,8 @@ class WidgetConsumer(WidgetAppBase):
         
         return True
     
-    def _delete_request_from_queue(self) -> bool:
+    def _delete_request_from_queue(self, receipt_handle:str) -> bool:
         try:
-            receipt_handle:str = self.receipt_handle_queue.get()
             self.logger.debug('deleting message: %s', receipt_handle)
             self.aws_sqs_queue.delete_message(
                 QueueUrl=self.request_queue_url,
@@ -281,6 +302,16 @@ class WidgetConsumer(WidgetAppBase):
         else:
             raise ValueError('Cannot process request due to unknown request type: %s', 
                              request['type'])
+
+    def process_request_thread(self):
+        '''Multithreading function for when SQS is used. Processes and deletes request from SQS'''
+        try:
+            request = self.request_queue.get(timeout=self.queue_wait_timeout)
+        except Empty as e:
+            self.logger.warning('Reached timeout count for thread.') 
+            return
+        self.process_request(loads(request['Body']))
+        self._delete_request_from_queue(request['ReceiptHandle'])
 
     def update_widget(self, request:dict) -> bool:
         '''Creates or replaces a widget in S3 or dynamodb depending on passed args.'''
