@@ -2,6 +2,7 @@ from boto3 import client
 from botocore.exceptions import ClientError
 from json import dumps
 from moto import mock_aws
+from queue import Queue
 from pytest import raises
 
 from source.widget_consumer import WidgetConsumer
@@ -152,14 +153,6 @@ class TestWidgetConsumerGetRequestS3:
         # verify
         assert { 'type' : 'unknown' } == test_request
 
-# @mock_aws
-# class TestWidgetConsumerGetRequestsQueue:
-#     def test_valid_get_request(self):
-#         NotImplementedError()
-
-#     def test_errored_get_request(self):
-#         NotImplementedError()
-
 @mock_aws
 class TestWidgetConsumerDeleteRequest:
     def test_valid_delete_request(self):
@@ -239,12 +232,6 @@ class TestWidgetConsumerProcessRequest:
         # Exercise and Verify
         assert app.process_request(request)
 
-    # def test_valid_update_widget_request():
-    #     NotImplementedError()
-
-    # def test_valid_delete_widget_request():
-    #     NotImplementedError()
-
     def test_invalid_request(self):
         # setup
         ## request
@@ -263,7 +250,7 @@ class TestWidgetConsumerProcessRequest:
 
 @mock_aws
 class TestWidgetConsumerUpdateWidgetS3:
-    def test_update_widget_s3_mocked_no_name_in_prefix(self):
+    def test_update_widget_s3_no_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -292,7 +279,7 @@ class TestWidgetConsumerUpdateWidgetS3:
         app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/1')
         assert True # We got a response so we are good
 
-    def test_update_widget_s3_mocked_name_in_prefix(self):
+    def test_update_widget_s3_name_in_prefix(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -322,7 +309,7 @@ class TestWidgetConsumerUpdateWidgetS3:
         app.aws_s3.get_object(Bucket=args.widget_bucket, Key='widgets/tester/1')
         assert True # We got a response so we are good
 
-    def test_update_widget_s3_mocked_bad_request(self):
+    def test_update_widget_s3_bad_request(self):
         # setup
         ## args
         args = ConsumerArgReplica()
@@ -439,7 +426,7 @@ class TestWidgetConsumerUpdateWidgetDynamoDB:
         assert not app._update_widget_dynamodb(request)
 
 @mock_aws
-class TestWidgetConsumerDeleteRequestS3:
+class TestWidgetConsumerDeleteWidgetS3:
     def test_delete_widget_s3_no_name_in_prefix(self):
         # setup
         ## args
@@ -555,7 +542,7 @@ class TestWidgetConsumerDeleteRequestS3:
         assert not app._delete_widget_s3(request)
 
 @mock_aws
-class TestWidgetConsumerDeleteRequestDynamoDB:
+class TestWidgetConsumerDeleteWidgetDynamoDB:
     def test_valid_delete_widget_dynamodb(self):
         # setup
         ## args
