@@ -85,7 +85,7 @@ class WidgetConsumer(WidgetAppBase):
         '''
         if not self._verify_base_arguments(args):
             return False
-        if args.max_runtime > 0:
+        if args.max_runtime < 0:
             self.logger.error('max_runtime tried to be set as negative for some reason')
             raise ValueError('max_runtime cannot be negative!')
         if args.widget_bucket is None and \
@@ -155,8 +155,9 @@ class WidgetConsumer(WidgetAppBase):
         while not done:
             try:
                 request = self._get_request()
-                self.logger.info('Received request of type %s: %s', request['type'], 
-                                 request['requestId'])
+                if request['type'] != 'unknown':
+                    self.logger.info('Received request of type %s: %s', request['type'], 
+                                     request['requestId'])
                 if self.request_bucket is not None:
                     self._delete_object_S3(self.request_bucket, request['request-bucket-key'])
                 if self.process_request(request):
@@ -219,12 +220,15 @@ class WidgetConsumer(WidgetAppBase):
         if not self.request_queue.empty(): # We are single-threaded for now, so this is ok.
             return self.request_queue.get()
 
-        response = self.aws_sqs_queue.receive_message(
+        response:dict = self.aws_sqs_queue.receive_message(
             QueueUrl=self.request_queue_url,
             MaxNumberOfMessages=10,
             VisibilityTimeout=self.queue_visibility_timeout,
             WaitTimeSeconds=self.queue_wait_timeout
         )
+
+        if 'Messages' not in response.keys():
+            return { 'type': 'unknown' }
 
         for message in response['Messages']:
             self.request_queue.put(loads(message["Body"]))
