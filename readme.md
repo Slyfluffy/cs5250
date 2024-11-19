@@ -25,6 +25,11 @@ For DynamoDb, do the following:
 
 `python3 widget_consumer.py -rb {request-bucket} -dwt {dynamodb-table-name}`
 
+For Docker, setup an `.env` file first, then run:
+
+`docker build -f docker/consumer.dockerfile -t consumer .`
+`docker run --rm -v log:/consumer/log --env-file=docker.env consumer {args}`
+
 ## Resource links
 
 * [python argparse](https://docs.python.org/3/library/argparse.html)

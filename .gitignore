@@ -1,6 +1,6 @@
 # Ignore compile python files
 *.pyc
-
+*.env
 log
-.vscode/
 /.devcontainer/devcontainer.json
+.vscode/
