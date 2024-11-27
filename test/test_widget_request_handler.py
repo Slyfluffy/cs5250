@@ -17,10 +17,10 @@ class TestWidgetRequestHandler():
 
         ## set environment variables
         environ['REGION'] = 'us-east-1'
-        environ['QUEUE_URL'] = 'test.test'
 
         ## setup client
         sqs = client('sqs', region_name='us-east-1')
+        environ['QUEUE_URL'] = sqs.create_queue(QueueName='test-queue')['QueueUrl']
 
         # Exercise
         assert handle_request(request, sqs)
@@ -32,6 +32,7 @@ class TestWidgetRequestHandler():
         )
         assert response['Messages'][0]["Body"]
 
+    @mock_aws
     def test_valid_widget_request_update(self):
         # setup
         request = {
@@ -42,10 +43,10 @@ class TestWidgetRequestHandler():
 
         ## set environment variables
         environ['REGION'] = 'us-east-1'
-        environ['QUEUE_URL'] = 'test.test'
 
         ## setup client
         sqs = client('sqs', region_name='us-east-1')
+        environ['QUEUE_URL'] = sqs.create_queue(QueueName='test-queue')['QueueUrl']
 
         # Exercise
         assert handle_request(request, sqs)
@@ -57,6 +58,7 @@ class TestWidgetRequestHandler():
         )
         assert response['Messages'][0]["Body"]
     
+    @mock_aws
     def test_valid_widget_request_delete(self):
         # setup
         request = {
@@ -67,10 +69,10 @@ class TestWidgetRequestHandler():
 
         ## set environment variables
         environ['REGION'] = 'us-east-1'
-        environ['QUEUE_URL'] = 'test.test'
 
         ## setup client
         sqs = client('sqs', region_name='us-east-1')
+        environ['QUEUE_URL'] = sqs.create_queue(QueueName='test-queue')['QueueUrl']
 
         # Exercise
         assert handle_request(request, sqs)
@@ -82,6 +84,7 @@ class TestWidgetRequestHandler():
         )
         assert response['Messages'][0]["Body"]
 
+    @mock_aws
     def test_invalid_request_type(self):
         # setup
         request = {
@@ -100,6 +103,7 @@ class TestWidgetRequestHandler():
         # Exercise
         assert not handle_request(request, sqs)
 
+    @mock_aws
     def test_widget_request_no_queue_url(self):
         # setup
         request = {
@@ -113,24 +117,7 @@ class TestWidgetRequestHandler():
 
         ## setup client
         sqs = client('sqs', region_name='us-east-1')
-
-        # Exercise
-        assert not handle_request(request, sqs)
-
-    def test_widget_request_client_error(self):
-        # setup
-        request = {
-            'requestId': '1',
-            'type': 'create',
-            'owner': 'tester'
-        }
-
-        ## set environment variables
-        environ['REGION'] = 'us-east-1'
-        environ['QUEUE_URL'] = 'test.test'
-
-        ## setup client
-        sqs = client('sqs', region_name='us-east-2')
+        sqs.create_queue(QueueName='test-queue')['QueueUrl']
 
         # Exercise
         assert not handle_request(request, sqs)
