@@ -2,21 +2,26 @@
 from boto3 import client
 from botocore.exceptions import ClientError
 from json import dumps, loads
-from logging import getLogger
+from logging import basicConfig, getLogger, INFO
 from os import environ
 from uuid import uuid4
 
+if getLogger().hasHandlers():
+    getLogger().setLevel(INFO)
+else:
+    basicConfig(level=INFO)
+
 logger = getLogger()
 
-def widget_request_handler(event: dict, context) -> None:
+def handler(event, context) -> None:
     '''AWS lambda function'''
     logger.info('Sending new message to SQS...')
     logger.debug('REGION: %s', environ['REGION'])
     logger.debug('QUEUE_URL: %s', environ['QUEUE_URL'])
 
-    request = loads(event['Body'])
-    request['requestId'] = event['requestId']
-    logger.info['requestId: %s', request['requestId']]
+    request = loads(event['body'])
+    request['requestId'] = context.aws_request_id
+    logger.info('requestId: %s', request['requestId'])
 
     sqs = client('sqs', region_name=environ['REGION'])
     result = handle_request(request, sqs)
